@@ -147,3 +147,42 @@ button:disabled, .raise-box input:disabled { background-color: #555; cursor: not
   background-color: #555;
   color: #fff;
 }
+
+/* --- 名前入力と役表示のUI --- */
+.name-input-box {
+  margin-bottom: 25px;
+}
+.name-input-box input {
+  padding: 12px 20px;
+  font-size: 18px;
+  border-radius: 30px;
+  border: 2px solid #ff9800;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  text-align: center;
+  outline: none;
+  font-weight: bold;
+}
+.name-input-box input:focus {
+  background: rgba(0,0,0,0.8);
+  border-color: #ffcc00;
+}
+
+.hand-indicator {
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  color: white;
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  display: inline-block;
+  border: 2px solid #fff;
+  animation: popIn 0.3s ease-out;
+}
+
+@keyframes popIn {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

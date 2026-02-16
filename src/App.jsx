@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
 
-// ★ここはご自身のRenderのURL（ijjj等の部分）になっているか確認してください！
 const API_URL = "https://poker-backend-ijjj.onrender.com/api"; 
 
 function App() {
@@ -9,9 +8,12 @@ function App() {
   const [gameState, setGameState] = useState(null);
   const [raiseAmount, setRaiseAmount] = useState(50);
   const [logs, setLogs] = useState(["ゲームを開始してください"]);
+  
+  // ★追加：プレイヤーの名前を管理するステート
+  const [playerName, setPlayerName] = useState("あなた");
+  
   const logEndRef = useRef(null);
 
-  // 効果音を鳴らす関数
   const playSound = (fileName) => {
     const audio = new Audio(`/${fileName}`);
     audio.play().catch(e => console.log("音声再生ブロック:", e));
@@ -30,7 +32,6 @@ function App() {
     logEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  // ★修正箇所：エラーの原因だった処理を、ルール通りここに移動させました！
   useEffect(() => {
     if (gameState && gameState.phase === "SHOWDOWN") {
       const p2 = gameState.players.find(p => p.id === "p2");
@@ -43,7 +44,12 @@ function App() {
   const startGame = async () => {
     playSound("deal.mp3");
     try {
-      const response = await fetch(`${API_URL}/start`, { method: "POST" });
+      // ★修正：プレイヤー名をAPIに送信する
+      const response = await fetch(`${API_URL}/start`, { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ player_name: playerName || "あなた" })
+      });
       const data = await response.json();
       setGameState(data.game_state);
       appendLog(data.game_state.message, true);
@@ -79,7 +85,12 @@ function App() {
 
   const resetGame = async () => {
     try {
-      const response = await fetch(`${API_URL}/reset`, { method: "POST" });
+      // ★修正：リセット時にもプレイヤー名を送信する
+      const response = await fetch(`${API_URL}/reset`, { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ player_name: playerName || "あなた" })
+      });
       const data = await response.json();
       setGameState(data.game_state);
       appendLog("【リセット】チップが初期化されました", true);
@@ -88,12 +99,23 @@ function App() {
     }
   };
 
-  // --- ここから画面の描画 ---
   if (currentScreen === 'TITLE') {
     return (
       <div className="title-screen">
         <h1 className="game-title">♠ TEXAS HOLD'EM ♠</h1>
         <div className="game-subtitle">Webブラウザ版 ポーカー</div>
+        
+        {/* ★追加：名前入力用のボックス */}
+        <div className="name-input-box">
+          <input 
+            type="text" 
+            value={playerName} 
+            onChange={e => setPlayerName(e.target.value)} 
+            placeholder="プレイヤー名を入力" 
+            maxLength="10"
+          />
+        </div>
+
         <div className="menu-buttons">
           <button className="btn-menu" onClick={startGame}>2人対戦 (vs CPU)</button>
           <button className="btn-menu" disabled>複数人対戦 (準備中...)</button>
@@ -181,7 +203,16 @@ function App() {
             <div style={{ minHeight: '90px' }}>
               {p1.hand.map((c, i) => renderCard(c, i))}
             </div>
-            <div className="info-tag">あなた | チップ: {p1.stack} | ベット: {p1.current_bet}</div>
+            
+            {/* ★追加：現在の役をリアルタイムで表示 */}
+            {gameState.p1_current_hand && (
+              <div className="hand-indicator">
+                現在の役：{gameState.p1_current_hand}
+              </div>
+            )}
+            
+            {/* ★修正：入力された名前を反映 */}
+            <div className="info-tag">{p1.name} | チップ: {p1.stack} | ベット: {p1.current_bet}</div>
             
             <div className="action-buttons">
               <button className="btn-call" onClick={() => takeAction('call')} disabled={!isMyTurn}>
