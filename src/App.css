@@ -201,3 +201,64 @@ button:disabled, .raise-box input:disabled { background-color: #555; cursor: not
   border: 2px solid #2196f3;
   animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+
+/* --- レイズ操作周りのUI（追加・上書き） --- */
+.raise-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 10px;
+  border-radius: 8px;
+  margin: 5px 0;
+}
+
+.raise-slider {
+  width: 100%;
+  cursor: pointer;
+  accent-color: #ff9800;
+}
+
+.raise-shortcuts {
+  display: flex;
+  gap: 5px;
+  justify-content: space-between;
+}
+
+.raise-shortcuts button {
+  flex: 1;
+  padding: 8px 0;
+  font-size: 14px;
+  font-weight: bold;
+  background-color: #444;
+  color: white;
+  border: 1px solid #777;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.raise-shortcuts button:hover:not(:disabled) {
+  background-color: #666;
+  border-color: #ff9800;
+}
+
+.raise-shortcuts button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.raise-inputs {
+  display: flex;
+  gap: 5px;
+}
+
+.raise-inputs input[type="number"] {
+  flex: 1;
+  width: auto;
+}
+
+.raise-inputs .btn-raise {
+  flex: 1;
+  margin: 0;
+}

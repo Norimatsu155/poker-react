@@ -10,7 +10,6 @@ function App() {
   const [logs, setLogs] = useState(["ゲームを開始してください"]);
   const [playerName, setPlayerName] = useState("あなた");
   
-  // ★新規追加：通信待ち（ディレイ中）かどうかを判定するステート
   const [isWaiting, setIsWaiting] = useState(false);
   
   const logEndRef = useRef(null);
@@ -43,7 +42,6 @@ function App() {
     }
   }, [gameState]);
 
-  // CPUターンのディレイ処理
   useEffect(() => {
     if (gameState && gameState.current_turn === "p2" && gameState.phase !== "SHOWDOWN") {
       const timer = setTimeout(async () => {
@@ -89,16 +87,13 @@ function App() {
     setCurrentScreen('TITLE');
   };
 
-  // ★大幅修正：プレイヤーのアクション時に1秒のディレイ（オプティミスティック更新）を入れる
   const takeAction = async (actionType, amount = 0) => {
     if (actionType !== 'fold') {
       playSound("chip.mp3");
     }
 
-    // 1. ボタンをロックする
     setIsWaiting(true);
 
-    // 2. 画面の見た目（吹き出し）だけを先に更新して表示させる
     const tempState = JSON.parse(JSON.stringify(gameState));
     const tempP1 = tempState.players.find(p => p.id === "p1");
     const tempP2 = tempState.players.find(p => p.id === "p2");
@@ -112,7 +107,7 @@ function App() {
       } else if (callReq === 0) {
         tempP1.last_action = "Check";
       } else {
-        tempP1.last_action = `Call ${tempP2.current_bet}`; // 目標額を表示
+        tempP1.last_action = `Call ${tempP2.current_bet}`;
       }
     } else if (actionType === 'raise') {
       if (amount >= tempP1.stack + tempP1.current_bet) {
@@ -123,7 +118,6 @@ function App() {
     }
     setGameState(tempState);
 
-    // 3. 1秒間「間（タメ）」を作ってから、サーバーに通信する
     setTimeout(async () => {
       try {
         const response = await fetch(`${API_URL}/action`, {
@@ -137,10 +131,9 @@ function App() {
       } catch (error) {
         console.error("通信エラー", error);
       } finally {
-        // 通信が終わったらロック解除
         setIsWaiting(false);
       }
-    }, 1000); // 1000ミリ秒 = 1.0秒のディレイ
+    }, 1000);
   };
 
   const resetGame = async () => {
@@ -186,8 +179,6 @@ function App() {
 
   const p1 = gameState.players.find(p => p.id === "p1");
   const p2 = gameState.players.find(p => p.id === "p2");
-  
-  // ★修正：待機中（isWaiting）は自分のターンでもボタンを押せないようにする
   const isMyTurn = gameState.current_turn === "p1" && gameState.phase !== "SHOWDOWN" && !isWaiting;
   const isGameOver = gameState.phase === "SHOWDOWN" && (p1.stack <= 0 || p2.stack <= 0);
 
@@ -195,7 +186,6 @@ function App() {
   const maxRaiseTo = p1.stack + p1.current_bet; 
   const minRaiseTo = Math.min(maxRaiseTo, p2.current_bet + 20);
 
-  // ★修正：Callボタンの文字も目標額にする
   let callBtnText = "";
   if (callRequired > 0 && p1.stack <= callRequired) {
     callBtnText = "All-In";
@@ -203,6 +193,46 @@ function App() {
     callBtnText = "Check";
   } else {
     callBtnText = `Call ${p2.current_bet}`; 
+  }
+
+  // ★新規追加：ショートカット金額の計算ロジック
+  const calculateShortcutAmounts = () => {
+    if (!gameState) return [0, 0, 0];
+    const phase = gameState.phase;
+    const p2Bet = p2.current_bet;
+    const pot = gameState.pot;
+
+    let target1, target2, target3;
+    if (phase === "PREFLOP") {
+      target1 = p2Bet * 2;
+      target2 = p2Bet * 3;
+      target3 = p2Bet * 4;
+    } else {
+      if (p2Bet === 0) {
+        // Flop以降でまだ誰もベットしていない時（Pot基準）
+        target1 = p1.current_bet + Math.floor(pot / 3);
+        target2 = p1.current_bet + Math.floor(pot / 2);
+        target3 = p1.current_bet + pot;
+      } else {
+        // Flop以降で相手がベット済みの時（相手のベット基準）
+        target1 = p2Bet * 2;
+        target2 = p2Bet * 3;
+        target3 = p2Bet * 4;
+      }
+    }
+
+    // 計算結果が所持金限界や最低レイズ額を超えないように調整
+    return [target1, target2, target3].map(val => {
+      if (val < minRaiseTo) return minRaiseTo;
+      if (val > maxRaiseTo) return maxRaiseTo;
+      return val;
+    });
+  };
+
+  const shortcutAmounts = calculateShortcutAmounts();
+  let shortcutLabels = ["2x", "3x", "4x"];
+  if (gameState && gameState.phase !== "PREFLOP" && p2.current_bet === 0) {
+    shortcutLabels = ["1/3 Pot", "1/2 Pot", "Pot"];
   }
 
   const submitRaise = () => {
@@ -310,17 +340,39 @@ function App() {
               <button className="btn-call" onClick={() => takeAction('call')} disabled={!isMyTurn}>
                 {callBtnText}
               </button>
+              
               <div className="raise-box">
+                {/* ★追加：スライダー */}
                 <input 
-                  type="number" 
+                  type="range" 
+                  min={minRaiseTo} 
+                  max={maxRaiseTo} 
                   value={raiseAmount} 
                   onChange={(e) => setRaiseAmount(Number(e.target.value))}
-                  max={maxRaiseTo}
-                  min={minRaiseTo}
                   disabled={!isMyTurn || maxRaiseTo <= p2.current_bet}
+                  className="raise-slider"
                 />
-                <button className="btn-raise" onClick={submitRaise} disabled={!isMyTurn || maxRaiseTo <= p2.current_bet}>Raise to</button>
+                
+                {/* ★追加：ショートカットボタン */}
+                <div className="raise-shortcuts">
+                  <button onClick={() => setRaiseAmount(shortcutAmounts[0])} disabled={!isMyTurn || maxRaiseTo <= p2.current_bet}>{shortcutLabels[0]}</button>
+                  <button onClick={() => setRaiseAmount(shortcutAmounts[1])} disabled={!isMyTurn || maxRaiseTo <= p2.current_bet}>{shortcutLabels[1]}</button>
+                  <button onClick={() => setRaiseAmount(shortcutAmounts[2])} disabled={!isMyTurn || maxRaiseTo <= p2.current_bet}>{shortcutLabels[2]}</button>
+                </div>
+
+                <div className="raise-inputs">
+                  <input 
+                    type="number" 
+                    value={raiseAmount} 
+                    onChange={(e) => setRaiseAmount(Number(e.target.value))}
+                    max={maxRaiseTo}
+                    min={minRaiseTo}
+                    disabled={!isMyTurn || maxRaiseTo <= p2.current_bet}
+                  />
+                  <button className="btn-raise" onClick={submitRaise} disabled={!isMyTurn || maxRaiseTo <= p2.current_bet}>Raise to</button>
+                </div>
               </div>
+
               <button className="btn-fold" onClick={() => takeAction('fold')} disabled={!isMyTurn}>Fold</button>
             </div>
           </div>
