@@ -183,7 +183,6 @@ function App() {
 
       <div className="game-container">
         <div className="table">
-          // --- ▼ ここから書き換え ▼ ---
           <div className="area">
             <div className="info-tag">
               {/* CPUにディーラーボタンがある場合に「Ⓓ」を表示 */}
@@ -219,8 +218,7 @@ function App() {
               {/* あなたにディーラーボタンがある場合に「Ⓓ」を表示 */}
               {gameState.dealer_button === "p1" && <span style={{color: "#ffeb3b", marginRight: "8px", fontWeight: "bold"}}>Ⓓ</span>}
               {p1.name} | チップ: {p1.stack} | ベット: {p1.current_bet}
-            </div>
-// --- ▲ ここまで書き換え ▲ ---            
+            </div>         
             <div className="action-buttons">
               <button className="btn-call" onClick={() => takeAction('call')} disabled={!isMyTurn}>
                 {maxRaise <= 0 ? "オールイン (全額コール)" : "コール / チェック"}
