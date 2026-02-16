@@ -227,7 +227,7 @@ button:disabled, .raise-box input:disabled { background-color: #555; cursor: not
 
 .raise-shortcuts button {
   flex: 1;
-  padding: 8px 0;
+  padding: 12px 0;
   font-size: 14px;
   font-weight: bold;
   background-color: #444;
@@ -261,4 +261,86 @@ button:disabled, .raise-box input:disabled { background-color: #555; cursor: not
 .raise-inputs .btn-raise {
   flex: 1;
   margin: 0;
+}
+
+/* --- アクションログのドロワー（引き出し）UI --- */
+.log-panel-container {
+  position: fixed;
+  top: 0;
+  right: -350px; /* 普段は画面外（右側）に隠しておく */
+  width: 300px;
+  height: 100vh;
+  background-color: rgba(20, 20, 20, 0.95);
+  box-shadow: -5px 0 15px rgba(0,0,0,0.7);
+  transition: right 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 1000;
+  padding: 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ボタンを押して「show」クラスがついたら画面内へスライドイン */
+.log-panel-container.show {
+  right: 0; 
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #444;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+.log-header h3 {
+  margin: 0;
+  color: #fff;
+}
+
+.btn-close-log {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn-close-log:hover {
+  color: #ff5252;
+}
+
+.btn-log-toggle {
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #555;
+  padding: 8px 15px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.btn-log-toggle:hover {
+  background-color: #555;
+  border-color: #ff9800;
+}
+
+/* 以前の固定表示パネルを消す */
+.log-panel {
+  display: none; 
+}
+
+#game-log {
+  flex: 1;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.log-entry {
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #ccc;
 }

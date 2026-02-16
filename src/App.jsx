@@ -12,6 +12,9 @@ function App() {
   
   const [isWaiting, setIsWaiting] = useState(false);
   
+  // ★追加：ログの表示/非表示を管理するスイッチ
+  const [showLogs, setShowLogs] = useState(false);
+  
   const logEndRef = useRef(null);
 
   const playSound = (fileName) => {
@@ -195,7 +198,6 @@ function App() {
     callBtnText = `Call ${p2.current_bet}`; 
   }
 
-  // ★新規追加：ショートカット金額の計算ロジック
   const calculateShortcutAmounts = () => {
     if (!gameState) return [0, 0, 0];
     const phase = gameState.phase;
@@ -209,19 +211,16 @@ function App() {
       target3 = p2Bet * 4;
     } else {
       if (p2Bet === 0) {
-        // Flop以降でまだ誰もベットしていない時（Pot基準）
         target1 = p1.current_bet + Math.floor(pot / 3);
         target2 = p1.current_bet + Math.floor(pot / 2);
         target3 = p1.current_bet + pot;
       } else {
-        // Flop以降で相手がベット済みの時（相手のベット基準）
         target1 = p2Bet * 2;
         target2 = p2Bet * 3;
         target3 = p2Bet * 4;
       }
     }
 
-    // 計算結果が所持金限界や最低レイズ額を超えないように調整
     return [target1, target2, target3].map(val => {
       if (val < minRaiseTo) return minRaiseTo;
       if (val > maxRaiseTo) return maxRaiseTo;
@@ -281,7 +280,11 @@ function App() {
       <div className="game-header">
         <button className="btn-back-title" onClick={backToTitle}>◀ タイトルに戻る</button>
         <button className="btn-start" onClick={startGame} style={{ marginBottom: 0 }} disabled={isWaiting}>♠ 新しいハンドを配る ♠</button>
-        <div style={{ width: "130px" }}></div>
+        
+        {/* ★変更：右上に「ログを見る」トグルボタンを追加 */}
+        <div style={{ width: "130px", textAlign: "right" }}>
+          <button className="btn-log-toggle" onClick={() => setShowLogs(true)}>📜 ログ</button>
+        </div>
       </div>
 
       <div id="game-message">{gameState.message}</div>
@@ -342,7 +345,6 @@ function App() {
               </button>
               
               <div className="raise-box">
-                {/* ★追加：スライダー */}
                 <input 
                   type="range" 
                   min={minRaiseTo} 
@@ -353,7 +355,6 @@ function App() {
                   className="raise-slider"
                 />
                 
-                {/* ★追加：ショートカットボタン */}
                 <div className="raise-shortcuts">
                   <button onClick={() => setRaiseAmount(shortcutAmounts[0])} disabled={!isMyTurn || maxRaiseTo <= p2.current_bet}>{shortcutLabels[0]}</button>
                   <button onClick={() => setRaiseAmount(shortcutAmounts[1])} disabled={!isMyTurn || maxRaiseTo <= p2.current_bet}>{shortcutLabels[1]}</button>
@@ -378,8 +379,12 @@ function App() {
           </div>
         </div>
 
-        <div className="log-panel">
-          <h3>📜 アクションログ</h3>
+        {/* ★変更：アクションログをドロワー形式にする */}
+        <div className={`log-panel-container ${showLogs ? "show" : ""}`}>
+          <div className="log-header">
+            <h3>📜 アクションログ</h3>
+            <button className="btn-close-log" onClick={() => setShowLogs(false)}>✖</button>
+          </div>
           <div id="game-log">
             {logs.map((log, index) => (
               <div key={index} className="log-entry" dangerouslySetInnerHTML={{ __html: log }}></div>
