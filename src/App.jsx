@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
 
-const API_URL = "https://poker-backend-ijjj.onrender.com/api"; // ← ご自身の本番URLになっているか確認してください
+// ★ここはご自身のRenderのURL（ijjj等の部分）になっているか確認してください！
+const API_URL = "https://poker-backend-ijjj.onrender.com/api"; 
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('TITLE');
@@ -10,9 +11,8 @@ function App() {
   const [logs, setLogs] = useState(["ゲームを開始してください"]);
   const logEndRef = useRef(null);
 
-  // --- ★追加：効果音を鳴らす専用関数 ---
+  // 効果音を鳴らす関数
   const playSound = (fileName) => {
-    // ブラウザの仕様（ユーザーが画面を触る前に音を鳴らすとエラーになる）を回避するため catch をつけます
     const audio = new Audio(`/${fileName}`);
     audio.play().catch(e => console.log("音声再生ブロック:", e));
   };
@@ -30,9 +30,18 @@ function App() {
     logEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  // --- ★修正：ゲーム開始時にカードの音を鳴らす ---
+  // ★修正箇所：エラーの原因だった処理を、ルール通りここに移動させました！
+  useEffect(() => {
+    if (gameState && gameState.phase === "SHOWDOWN") {
+      const p2 = gameState.players.find(p => p.id === "p2");
+      if (p2 && p2.stack === 0) {
+        playSound("win.mp3");
+      }
+    }
+  }, [gameState]);
+
   const startGame = async () => {
-    playSound("deal.mp3"); // ← ここで音を鳴らす！
+    playSound("deal.mp3");
     try {
       const response = await fetch(`${API_URL}/start`, { method: "POST" });
       const data = await response.json();
@@ -50,12 +59,10 @@ function App() {
     setCurrentScreen('TITLE');
   };
 
-  // --- ★修正：アクション時にチップの音を鳴らす ---
   const takeAction = async (actionType, amount = 0) => {
     if (actionType !== 'fold') {
-      playSound("chip.mp3"); // ← フォールド以外ならチップ音を鳴らす！
+      playSound("chip.mp3");
     }
-    
     try {
       const response = await fetch(`${API_URL}/action`, {
         method: "POST",
@@ -81,6 +88,7 @@ function App() {
     }
   };
 
+  // --- ここから画面の描画 ---
   if (currentScreen === 'TITLE') {
     return (
       <div className="title-screen">
@@ -100,14 +108,6 @@ function App() {
   const p2 = gameState.players.find(p => p.id === "p2");
   const isMyTurn = gameState.current_turn === "p1" && gameState.phase !== "SHOWDOWN";
   const isGameOver = gameState.phase === "SHOWDOWN" && (p1.stack <= 0 || p2.stack <= 0);
-
-  // --- ★追加：完全勝利した時にファンファーレを鳴らす ---
-  // データが更新されて、かつCPUのチップが0になった瞬間に1回だけ鳴らします
-  useEffect(() => {
-    if (isGameOver && p2.stack === 0) {
-      playSound("win.mp3");
-    }
-  }, [isGameOver, p2.stack]);
 
   const callRequired = p2.current_bet - p1.current_bet;
   const maxRaise = Math.max(0, p1.stack - callRequired);
@@ -160,7 +160,6 @@ function App() {
       <div id="game-message">{gameState.message}</div>
 
       <div className="game-container">
-        {/* ...テーブルやカードの描画部分は変更なし ... */}
         <div className="table">
           <div className="area">
             <div className="info-tag">CPU | チップ: {p2.stack} | ベット: {p2.current_bet}</div>
