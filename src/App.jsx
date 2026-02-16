@@ -150,9 +150,11 @@ function App() {
   const isGameOver = gameState.phase === "SHOWDOWN" && (p1.stack <= 0 || p2.stack <= 0);
 
   const callRequired = p2.current_bet - p1.current_bet;
-  const maxRaise = Math.max(0, p1.stack - callRequired);
+  
+  // ★修正：「Raise to X（自分の合計ベット額）」方式に変更
+  const maxRaiseTo = p1.stack + p1.current_bet; // オールインしたときの最終ベット額
+  const minRaiseTo = Math.min(maxRaiseTo, p2.current_bet + 20); // 最低でも相手のベット+20(BB)は必要
 
-  // ★新規追加：状況に応じて Call / Check / All-In の文字を切り替えるロジック
   let callBtnText = "";
   if (callRequired > 0 && p1.stack <= callRequired) {
     callBtnText = "All-In";
@@ -163,10 +165,14 @@ function App() {
   }
 
   const submitRaise = () => {
-    if (raiseAmount <= 0) return alert("正しい金額を入力してください");
-    if (raiseAmount > maxRaise) {
-      alert(`所持金が足りません！(最大レイズ可能額: ${maxRaise} チップ)`);
-      setRaiseAmount(maxRaise);
+    if (raiseAmount < minRaiseTo) {
+      alert(`最低レイズ額は ${minRaiseTo} チップです`);
+      setRaiseAmount(minRaiseTo);
+      return;
+    }
+    if (raiseAmount > maxRaiseTo) {
+      alert(`所持金が足りません！(最大: ${maxRaiseTo})`);
+      setRaiseAmount(maxRaiseTo);
       return;
     }
     takeAction('raise', raiseAmount);
@@ -259,7 +265,6 @@ function App() {
               {p1.name} | チップ: {p1.stack} | ベット: {p1.current_bet}
             </div>
             
-            {/* ★修正：ボタンの表記を英語化し、callBtnText変数を使用 */}
             <div className="action-buttons">
               <button className="btn-call" onClick={() => takeAction('call')} disabled={!isMyTurn}>
                 {callBtnText}
@@ -269,10 +274,12 @@ function App() {
                   type="number" 
                   value={raiseAmount} 
                   onChange={(e) => setRaiseAmount(Number(e.target.value))}
-                  max={maxRaise}
-                  disabled={!isMyTurn || maxRaise <= 0}
+                  max={maxRaiseTo}
+                  min={minRaiseTo}
+                  disabled={!isMyTurn || maxRaiseTo <= p2.current_bet}
                 />
-                <button className="btn-raise" onClick={submitRaise} disabled={!isMyTurn || maxRaise <= 0}>Raise</button>
+                {/* ★修正：ボタンの文字を「Raise to」に変更 */}
+                <button className="btn-raise" onClick={submitRaise} disabled={!isMyTurn || maxRaiseTo <= p2.current_bet}>Raise to</button>
               </div>
               <button className="btn-fold" onClick={() => takeAction('fold')} disabled={!isMyTurn}>Fold</button>
             </div>
