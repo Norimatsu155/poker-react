@@ -183,8 +183,13 @@ function App() {
 
       <div className="game-container">
         <div className="table">
+          // --- ▼ ここから書き換え ▼ ---
           <div className="area">
-            <div className="info-tag">CPU | チップ: {p2.stack} | ベット: {p2.current_bet}</div>
+            <div className="info-tag">
+              {/* CPUにディーラーボタンがある場合に「Ⓓ」を表示 */}
+              {gameState.dealer_button === "p2" && <span style={{color: "#ffeb3b", marginRight: "8px", fontWeight: "bold"}}>Ⓓ</span>}
+              CPU | チップ: {p2.stack} | ベット: {p2.current_bet}
+            </div>
             <div>
               {gameState.phase === "SHOWDOWN" 
                 ? p2.hand.map((c, i) => renderCard(c, i))
@@ -204,16 +209,18 @@ function App() {
               {p1.hand.map((c, i) => renderCard(c, i))}
             </div>
             
-            {/* ★追加：現在の役をリアルタイムで表示 */}
             {gameState.p1_current_hand && (
               <div className="hand-indicator">
                 現在の役：{gameState.p1_current_hand}
               </div>
             )}
             
-            {/* ★修正：入力された名前を反映 */}
-            <div className="info-tag">{p1.name} | チップ: {p1.stack} | ベット: {p1.current_bet}</div>
-            
+            <div className="info-tag">
+              {/* あなたにディーラーボタンがある場合に「Ⓓ」を表示 */}
+              {gameState.dealer_button === "p1" && <span style={{color: "#ffeb3b", marginRight: "8px", fontWeight: "bold"}}>Ⓓ</span>}
+              {p1.name} | チップ: {p1.stack} | ベット: {p1.current_bet}
+            </div>
+// --- ▲ ここまで書き換え ▲ ---            
             <div className="action-buttons">
               <button className="btn-call" onClick={() => takeAction('call')} disabled={!isMyTurn}>
                 {maxRaise <= 0 ? "オールイン (全額コール)" : "コール / チェック"}
