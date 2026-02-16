@@ -1,0 +1,149 @@
+/* src/App.css に貼り付けます */
+body {
+  background-color: #1a1a1a;
+  color: white;
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+  /* 以下の4行を追加して画面中央に配置します */
+  display: flex;
+  justify-content: center; /* 水平方向の中央揃え */
+  align-items: center;     /* 垂直方向の中央揃え */
+  min-height: 100vh;       /* 画面の高さいっぱいに広げる */
+}
+
+.app-container {
+  text-align: center;
+  padding: 20px;
+}
+
+/* --- 以下の部分は以前のCSSとほぼ同じです --- */
+.game-container { display: flex; justify-content: center; align-items: stretch; gap: 20px; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; }
+.table { background: radial-gradient(ellipse at center, #2e8b57 0%, #17452b 100%); border: 15px solid #5c3a21; border-radius: 150px; padding: 40px 20px; box-shadow: 0 15px 30px rgba(0,0,0,0.8), inset 0 0 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; justify-content: space-between; flex: 1; min-width: 650px; min-height: 500px; }
+
+.log-panel { width: 320px; background: #222; border: 2px solid #444; border-radius: 15px; padding: 15px; display: flex; flex-direction: column; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+.log-panel h3 { margin: 0 0 15px 0; color: #ff9800; border-bottom: 2px solid #444; padding-bottom: 10px; font-size: 20px; }
+#game-log { flex: 1; overflow-y: auto; text-align: left; font-size: 14px; line-height: 1.6; padding-right: 10px; max-height: 500px; }
+#game-log::-webkit-scrollbar { width: 8px; } #game-log::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
+.log-entry { margin-bottom: 8px; border-bottom: 1px dashed #333; padding-bottom: 6px; }
+
+.area { width: 100%; display: flex; flex-direction: column; align-items: center; }
+.info-tag { background: rgba(0, 0, 0, 0.6); padding: 8px 20px; border-radius: 20px; font-size: 16px; margin-bottom: 10px; border: 1px solid #ffcc00; }
+#info-board { background: linear-gradient(180deg, #ffd700, #daa520); color: #000; padding: 10px 30px; border-radius: 30px; font-weight: 900; font-size: 20px; margin: 20px 0; }
+
+.card { display: inline-flex; justify-content: center; align-items: center; background: white; color: black; border-radius: 8px; margin: 0 5px; font-size: 28px; font-weight: bold; width: 60px; height: 85px; box-shadow: 2px 5px 10px rgba(0,0,0,0.4); border: 1px solid #ccc; animation: dealCard 0.4s ease-out backwards; }
+.card.red { color: #d32f2f; }
+.card.back { background: repeating-linear-gradient(45deg, #b71c1c, #b71c1c 10px, #ffffff 10px, #ffffff 20px); color: transparent; border: 2px solid #fff; }
+@keyframes dealCard { from { opacity: 0; transform: translateY(-30px) scale(0.8); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+.action-buttons { margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.raise-box { display: flex; align-items: center; background: rgba(0, 0, 0, 0.4); padding: 5px; border-radius: 8px; }
+.raise-box input { width: 80px; padding: 10px; font-size: 18px; font-weight: bold; border-radius: 5px; border: none; text-align: center; margin-right: 5px; }
+
+button { padding: 12px 25px; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; color: white; transition: all 0.1s; }
+button:active { transform: translateY(4px); }
+button:disabled, .raise-box input:disabled { background-color: #555; cursor: not-allowed; color: #888; }
+.btn-call { background-color: #2196F3; } .btn-raise { background-color: #4CAF50; } .btn-fold { background-color: #f44336; }
+.btn-start { background-color: #ff9800; font-size: 20px; padding: 15px 40px; border-radius: 30px; margin-bottom: 20px;}
+#game-message { background: rgba(255, 255, 255, 0.9); color: #333; padding: 15px; margin: 0 auto 20px auto; border-radius: 8px; font-weight: bold; font-size: 18px; max-width: 800px; border-left: 5px solid #ff9800; }
+
+/* --- ゲームオーバー用のポップアップ --- */
+.game-over-modal {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.85); z-index: 1000;
+  display: flex; justify-content: center; align-items: center;
+  flex-direction: column; animation: fadeIn 0.5s ease-out;
+}
+.modal-content {
+  background: #222; padding: 50px; border-radius: 20px;
+  text-align: center; border: 5px solid #ff9800;
+}
+.btn-reset { background-color: #e91e63; font-size: 24px; padding: 15px 50px; border-radius: 50px; margin-top: 20px;}
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+/* --- タイトル画面のデザイン --- */
+.title-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100vw;
+  background: radial-gradient(circle at center, #2e8b57 0%, #0a1f13 100%);
+}
+
+.game-title {
+  font-size: 72px;
+  color: #ffcc00;
+  text-shadow: 0 5px 15px rgba(0,0,0,0.8), 0 0 20px rgba(255,204,0,0.5);
+  margin: 0 0 10px 0;
+  font-weight: 900;
+}
+
+.game-subtitle {
+  font-size: 24px;
+  color: #fff;
+  margin-bottom: 60px;
+  letter-spacing: 4px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 350px;
+}
+
+.btn-menu {
+  background-color: #ff9800;
+  color: white;
+  font-size: 22px;
+  font-weight: bold;
+  padding: 20px;
+  border-radius: 50px;
+  border: 3px solid #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 8px 15px rgba(0,0,0,0.5);
+}
+
+.btn-menu:hover:not(:disabled) {
+  transform: translateY(-5px) scale(1.05);
+  background-color: #ffb74d;
+  box-shadow: 0 12px 20px rgba(0,0,0,0.6);
+}
+
+.btn-menu:disabled {
+  background-color: #444;
+  border-color: #666;
+  color: #888;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ゲーム画面用のヘッダー領域 */
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto 20px auto;
+}
+
+.btn-back-title {
+  background-color: #333;
+  color: #ddd;
+  border: 1px solid #555;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: 0.2s;
+}
+
+.btn-back-title:hover {
+  background-color: #555;
+  color: #fff;
+}
