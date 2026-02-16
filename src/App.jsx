@@ -40,7 +40,6 @@ function App() {
     }
   }, [gameState]);
 
-  // ★新規追加：ターンが「p2 (CPU)」になったら、1.5秒待ってから自動でAPIを叩く！
   useEffect(() => {
     if (gameState && gameState.current_turn === "p2" && gameState.phase !== "SHOWDOWN") {
       const timer = setTimeout(async () => {
@@ -48,7 +47,6 @@ function App() {
           const response = await fetch(`${API_URL}/cpu_action`, { method: "POST" });
           const data = await response.json();
           
-          // CPUのアクション音を鳴らす（フォールド以外）
           const p2 = data.game_state.players.find(p => p.id === "p2");
           if (p2 && p2.last_action !== "Fold") {
             playSound("chip.mp3");
@@ -59,7 +57,7 @@ function App() {
         } catch (error) {
           console.error("通信エラー", error);
         }
-      }, 1500); // 1500ミリ秒 = 1.5秒のディレイ
+      }, 1500);
       return () => clearTimeout(timer);
     }
   }, [gameState]);
@@ -148,13 +146,21 @@ function App() {
 
   const p1 = gameState.players.find(p => p.id === "p1");
   const p2 = gameState.players.find(p => p.id === "p2");
-  
-  // ★修正：自分のターンかつ、フェーズが進んでいない時だけボタンを押せるようにする
   const isMyTurn = gameState.current_turn === "p1" && gameState.phase !== "SHOWDOWN";
   const isGameOver = gameState.phase === "SHOWDOWN" && (p1.stack <= 0 || p2.stack <= 0);
 
   const callRequired = p2.current_bet - p1.current_bet;
   const maxRaise = Math.max(0, p1.stack - callRequired);
+
+  // ★新規追加：状況に応じて Call / Check / All-In の文字を切り替えるロジック
+  let callBtnText = "";
+  if (callRequired > 0 && p1.stack <= callRequired) {
+    callBtnText = "All-In";
+  } else if (callRequired === 0) {
+    callBtnText = "Check";
+  } else {
+    callBtnText = `Call ${callRequired}`;
+  }
 
   const submitRaise = () => {
     if (raiseAmount <= 0) return alert("正しい金額を入力してください");
@@ -211,7 +217,6 @@ function App() {
               CPU | チップ: {p2.stack} | ベット: {p2.current_bet}
             </div>
             
-            {/* ★新規追加：CPUのアクション吹き出し */}
             <div style={{ minHeight: "40px" }}>
               {p2.last_action && (
                 <div className="action-bubble">{p2.last_action}</div>
@@ -243,7 +248,6 @@ function App() {
               </div>
             )}
             
-            {/* ★新規追加：あなたのアクション吹き出し */}
             <div style={{ minHeight: "40px" }}>
               {p1.last_action && (
                 <div className="action-bubble">{p1.last_action}</div>
@@ -255,9 +259,10 @@ function App() {
               {p1.name} | チップ: {p1.stack} | ベット: {p1.current_bet}
             </div>
             
+            {/* ★修正：ボタンの表記を英語化し、callBtnText変数を使用 */}
             <div className="action-buttons">
               <button className="btn-call" onClick={() => takeAction('call')} disabled={!isMyTurn}>
-                {maxRaise <= 0 ? "オールイン (全額コール)" : "コール / チェック"}
+                {callBtnText}
               </button>
               <div className="raise-box">
                 <input 
@@ -267,9 +272,9 @@ function App() {
                   max={maxRaise}
                   disabled={!isMyTurn || maxRaise <= 0}
                 />
-                <button className="btn-raise" onClick={submitRaise} disabled={!isMyTurn || maxRaise <= 0}>レイズ</button>
+                <button className="btn-raise" onClick={submitRaise} disabled={!isMyTurn || maxRaise <= 0}>Raise</button>
               </div>
-              <button className="btn-fold" onClick={() => takeAction('fold')} disabled={!isMyTurn}>フォールド</button>
+              <button className="btn-fold" onClick={() => takeAction('fold')} disabled={!isMyTurn}>Fold</button>
             </div>
           </div>
         </div>
