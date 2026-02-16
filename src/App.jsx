@@ -1,19 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
 
-// const API_URL = "http://localhost:8000/api";
-// const API_URL = "http://192.168.10.154:8000/api";
-const API_URL = "https://poker-backend-ijjj.onrender.com/api";
+const API_URL = "https://poker-backend-ijjj.onrender.com/api"; // ← ご自身の本番URLになっているか確認してください
 
 function App() {
-  // --- 1. 状態（State）の定義 ---
-  // ★追加：現在の画面を管理するState（'TITLE' または 'GAME'）
   const [currentScreen, setCurrentScreen] = useState('TITLE');
-  
   const [gameState, setGameState] = useState(null);
   const [raiseAmount, setRaiseAmount] = useState(50);
   const [logs, setLogs] = useState(["ゲームを開始してください"]);
   const logEndRef = useRef(null);
+
+  // --- ★追加：効果音を鳴らす専用関数 ---
+  const playSound = (fileName) => {
+    // ブラウザの仕様（ユーザーが画面を触る前に音を鳴らすとエラーになる）を回避するため catch をつけます
+    const audio = new Audio(`/${fileName}`);
+    audio.play().catch(e => console.log("音声再生ブロック:", e));
+  };
 
   const appendLog = (message, isNewHand = false) => {
     const timeStr = new Date().toLocaleTimeString('ja-JP', { hour12: false });
@@ -28,29 +30,32 @@ function App() {
     logEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  // --- 3. API通信処理 ---
+  // --- ★修正：ゲーム開始時にカードの音を鳴らす ---
   const startGame = async () => {
+    playSound("deal.mp3"); // ← ここで音を鳴らす！
     try {
       const response = await fetch(`${API_URL}/start`, { method: "POST" });
       const data = await response.json();
       setGameState(data.game_state);
       appendLog(data.game_state.message, true);
-      // ★追加：ゲームデータの取得に成功したら、ゲーム画面へ遷移する
       setCurrentScreen('GAME');
     } catch (error) {
-      alert("サーバーに接続できません。FastAPIを起動してください。");
+      alert("サーバーに接続できません。");
     }
   };
 
-  // ★追加：タイトル画面に戻る関数
   const backToTitle = () => {
-    // 状態を初期化してタイトルへ
     setGameState(null);
     setLogs(["ゲームを開始してください"]);
     setCurrentScreen('TITLE');
   };
 
+  // --- ★修正：アクション時にチップの音を鳴らす ---
   const takeAction = async (actionType, amount = 0) => {
+    if (actionType !== 'fold') {
+      playSound("chip.mp3"); // ← フォールド以外ならチップ音を鳴らす！
+    }
+    
     try {
       const response = await fetch(`${API_URL}/action`, {
         method: "POST",
@@ -76,34 +81,33 @@ function App() {
     }
   };
 
-  // --- 4. 画面の描画（JSX） ---
-
-  // ★追加：タイトル画面のレンダリング
   if (currentScreen === 'TITLE') {
     return (
       <div className="title-screen">
         <h1 className="game-title">♠ TEXAS HOLD'EM ♠</h1>
         <div className="game-subtitle">Webブラウザ版 ポーカー</div>
-        
         <div className="menu-buttons">
           <button className="btn-menu" onClick={startGame}>2人対戦 (vs CPU)</button>
-          
-          {/* 将来のためのボタン（今は押せないように disabled にしておく） */}
-          <button className="btn-menu" disabled>
-            複数人対戦 (準備中...)
-          </button>
+          <button className="btn-menu" disabled>複数人対戦 (準備中...)</button>
         </div>
       </div>
     );
   }
 
-  // --- これ以下はゲーム画面（GAME）のレンダリング ---
-  if (!gameState) return null; // データロード中の安全対策
+  if (!gameState) return null;
 
   const p1 = gameState.players.find(p => p.id === "p1");
   const p2 = gameState.players.find(p => p.id === "p2");
   const isMyTurn = gameState.current_turn === "p1" && gameState.phase !== "SHOWDOWN";
   const isGameOver = gameState.phase === "SHOWDOWN" && (p1.stack <= 0 || p2.stack <= 0);
+
+  // --- ★追加：完全勝利した時にファンファーレを鳴らす ---
+  // データが更新されて、かつCPUのチップが0になった瞬間に1回だけ鳴らします
+  useEffect(() => {
+    if (isGameOver && p2.stack === 0) {
+      playSound("win.mp3");
+    }
+  }, [isGameOver, p2.stack]);
 
   const callRequired = p2.current_bet - p1.current_bet;
   const maxRaise = Math.max(0, p1.stack - callRequired);
@@ -147,16 +151,16 @@ function App() {
         </div>
       )}
 
-      {/* ★追加：ゲーム画面上部のヘッダー領域（戻るボタンと新しいハンドボタン） */}
       <div className="game-header">
         <button className="btn-back-title" onClick={backToTitle}>◀ タイトルに戻る</button>
         <button className="btn-start" onClick={startGame} style={{ marginBottom: 0 }}>♠ 新しいハンドを配る ♠</button>
-        <div style={{ width: "130px" }}></div> {/* レイアウト調整用の空箱 */}
+        <div style={{ width: "130px" }}></div>
       </div>
 
       <div id="game-message">{gameState.message}</div>
 
       <div className="game-container">
+        {/* ...テーブルやカードの描画部分は変更なし ... */}
         <div className="table">
           <div className="area">
             <div className="info-tag">CPU | チップ: {p2.stack} | ベット: {p2.current_bet}</div>
