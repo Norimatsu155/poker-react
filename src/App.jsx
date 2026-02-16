@@ -10,6 +10,9 @@ function App() {
   const [logs, setLogs] = useState(["ゲームを開始してください"]);
   const [playerName, setPlayerName] = useState("あなた");
   
+  // ★新規追加：通信待ち（ディレイ中）かどうかを判定するステート
+  const [isWaiting, setIsWaiting] = useState(false);
+  
   const logEndRef = useRef(null);
 
   const playSound = (fileName) => {
@@ -40,6 +43,7 @@ function App() {
     }
   }, [gameState]);
 
+  // CPUターンのディレイ処理
   useEffect(() => {
     if (gameState && gameState.current_turn === "p2" && gameState.phase !== "SHOWDOWN") {
       const timer = setTimeout(async () => {
@@ -85,22 +89,58 @@ function App() {
     setCurrentScreen('TITLE');
   };
 
+  // ★大幅修正：プレイヤーのアクション時に1秒のディレイ（オプティミスティック更新）を入れる
   const takeAction = async (actionType, amount = 0) => {
     if (actionType !== 'fold') {
       playSound("chip.mp3");
     }
-    try {
-      const response = await fetch(`${API_URL}/action`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ player_id: "p1", action_type: actionType, amount: amount })
-      });
-      const data = await response.json();
-      setGameState(data.game_state);
-      appendLog(data.game_state.message);
-    } catch (error) {
-      console.error("通信エラー", error);
+
+    // 1. ボタンをロックする
+    setIsWaiting(true);
+
+    // 2. 画面の見た目（吹き出し）だけを先に更新して表示させる
+    const tempState = JSON.parse(JSON.stringify(gameState));
+    const tempP1 = tempState.players.find(p => p.id === "p1");
+    const tempP2 = tempState.players.find(p => p.id === "p2");
+    
+    if (actionType === 'fold') {
+      tempP1.last_action = "Fold";
+    } else if (actionType === 'call') {
+      const callReq = tempP2.current_bet - tempP1.current_bet;
+      if (callReq >= tempP1.stack) {
+        tempP1.last_action = "All-In";
+      } else if (callReq === 0) {
+        tempP1.last_action = "Check";
+      } else {
+        tempP1.last_action = `Call ${tempP2.current_bet}`; // 目標額を表示
+      }
+    } else if (actionType === 'raise') {
+      if (amount >= tempP1.stack + tempP1.current_bet) {
+        tempP1.last_action = "All-In";
+      } else {
+        tempP1.last_action = `Raise to ${amount}`;
+      }
     }
+    setGameState(tempState);
+
+    // 3. 1秒間「間（タメ）」を作ってから、サーバーに通信する
+    setTimeout(async () => {
+      try {
+        const response = await fetch(`${API_URL}/action`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ player_id: "p1", action_type: actionType, amount: amount })
+        });
+        const data = await response.json();
+        setGameState(data.game_state);
+        appendLog(data.game_state.message);
+      } catch (error) {
+        console.error("通信エラー", error);
+      } finally {
+        // 通信が終わったらロック解除
+        setIsWaiting(false);
+      }
+    }, 1000); // 1000ミリ秒 = 1.0秒のディレイ
   };
 
   const resetGame = async () => {
@@ -146,22 +186,23 @@ function App() {
 
   const p1 = gameState.players.find(p => p.id === "p1");
   const p2 = gameState.players.find(p => p.id === "p2");
-  const isMyTurn = gameState.current_turn === "p1" && gameState.phase !== "SHOWDOWN";
+  
+  // ★修正：待機中（isWaiting）は自分のターンでもボタンを押せないようにする
+  const isMyTurn = gameState.current_turn === "p1" && gameState.phase !== "SHOWDOWN" && !isWaiting;
   const isGameOver = gameState.phase === "SHOWDOWN" && (p1.stack <= 0 || p2.stack <= 0);
 
   const callRequired = p2.current_bet - p1.current_bet;
-  
-  // ★修正：「Raise to X（自分の合計ベット額）」方式に変更
-  const maxRaiseTo = p1.stack + p1.current_bet; // オールインしたときの最終ベット額
-  const minRaiseTo = Math.min(maxRaiseTo, p2.current_bet + 20); // 最低でも相手のベット+20(BB)は必要
+  const maxRaiseTo = p1.stack + p1.current_bet; 
+  const minRaiseTo = Math.min(maxRaiseTo, p2.current_bet + 20);
 
+  // ★修正：Callボタンの文字も目標額にする
   let callBtnText = "";
   if (callRequired > 0 && p1.stack <= callRequired) {
     callBtnText = "All-In";
   } else if (callRequired === 0) {
     callBtnText = "Check";
   } else {
-    callBtnText = `Call ${callRequired}`;
+    callBtnText = `Call ${p2.current_bet}`; 
   }
 
   const submitRaise = () => {
@@ -209,7 +250,7 @@ function App() {
 
       <div className="game-header">
         <button className="btn-back-title" onClick={backToTitle}>◀ タイトルに戻る</button>
-        <button className="btn-start" onClick={startGame} style={{ marginBottom: 0 }}>♠ 新しいハンドを配る ♠</button>
+        <button className="btn-start" onClick={startGame} style={{ marginBottom: 0 }} disabled={isWaiting}>♠ 新しいハンドを配る ♠</button>
         <div style={{ width: "130px" }}></div>
       </div>
 
@@ -278,7 +319,6 @@ function App() {
                   min={minRaiseTo}
                   disabled={!isMyTurn || maxRaiseTo <= p2.current_bet}
                 />
-                {/* ★修正：ボタンの文字を「Raise to」に変更 */}
                 <button className="btn-raise" onClick={submitRaise} disabled={!isMyTurn || maxRaiseTo <= p2.current_bet}>Raise to</button>
               </div>
               <button className="btn-fold" onClick={() => takeAction('fold')} disabled={!isMyTurn}>Fold</button>
