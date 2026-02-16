@@ -1,15 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
 
-const API_URL = "https://poker-backend-ijjj.onrender.com/api"; 
+const API_URL = "https://poker-backend-ijjj.onrender.com/api"; // ★ご自身のURLを確認してください！
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('TITLE');
   const [gameState, setGameState] = useState(null);
   const [raiseAmount, setRaiseAmount] = useState(50);
   const [logs, setLogs] = useState(["ゲームを開始してください"]);
-  
-  // ★追加：プレイヤーの名前を管理するステート
   const [playerName, setPlayerName] = useState("あなた");
   
   const logEndRef = useRef(null);
@@ -20,6 +18,7 @@ function App() {
   };
 
   const appendLog = (message, isNewHand = false) => {
+    if (!message) return;
     const timeStr = new Date().toLocaleTimeString('ja-JP', { hour12: false });
     if (isNewHand) {
       setLogs(prev => [...prev, `--- 新しいハンド ---`, `[${timeStr}] ${message}`]);
@@ -41,10 +40,33 @@ function App() {
     }
   }, [gameState]);
 
+  // ★新規追加：ターンが「p2 (CPU)」になったら、1.5秒待ってから自動でAPIを叩く！
+  useEffect(() => {
+    if (gameState && gameState.current_turn === "p2" && gameState.phase !== "SHOWDOWN") {
+      const timer = setTimeout(async () => {
+        try {
+          const response = await fetch(`${API_URL}/cpu_action`, { method: "POST" });
+          const data = await response.json();
+          
+          // CPUのアクション音を鳴らす（フォールド以外）
+          const p2 = data.game_state.players.find(p => p.id === "p2");
+          if (p2 && p2.last_action !== "Fold") {
+            playSound("chip.mp3");
+          }
+          
+          setGameState(data.game_state);
+          appendLog(data.game_state.message);
+        } catch (error) {
+          console.error("通信エラー", error);
+        }
+      }, 1500); // 1500ミリ秒 = 1.5秒のディレイ
+      return () => clearTimeout(timer);
+    }
+  }, [gameState]);
+
   const startGame = async () => {
     playSound("deal.mp3");
     try {
-      // ★修正：プレイヤー名をAPIに送信する
       const response = await fetch(`${API_URL}/start`, { 
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -85,7 +107,6 @@ function App() {
 
   const resetGame = async () => {
     try {
-      // ★修正：リセット時にもプレイヤー名を送信する
       const response = await fetch(`${API_URL}/reset`, { 
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -105,7 +126,6 @@ function App() {
         <h1 className="game-title">♠ TEXAS HOLD'EM ♠</h1>
         <div className="game-subtitle">Webブラウザ版 ポーカー</div>
         
-        {/* ★追加：名前入力用のボックス */}
         <div className="name-input-box">
           <input 
             type="text" 
@@ -128,6 +148,8 @@ function App() {
 
   const p1 = gameState.players.find(p => p.id === "p1");
   const p2 = gameState.players.find(p => p.id === "p2");
+  
+  // ★修正：自分のターンかつ、フェーズが進んでいない時だけボタンを押せるようにする
   const isMyTurn = gameState.current_turn === "p1" && gameState.phase !== "SHOWDOWN";
   const isGameOver = gameState.phase === "SHOWDOWN" && (p1.stack <= 0 || p2.stack <= 0);
 
@@ -185,10 +207,17 @@ function App() {
         <div className="table">
           <div className="area">
             <div className="info-tag">
-              {/* CPUにディーラーボタンがある場合に「Ⓓ」を表示 */}
               {gameState.dealer_button === "p2" && <span style={{color: "#ffeb3b", marginRight: "8px", fontWeight: "bold"}}>Ⓓ</span>}
               CPU | チップ: {p2.stack} | ベット: {p2.current_bet}
             </div>
+            
+            {/* ★新規追加：CPUのアクション吹き出し */}
+            <div style={{ minHeight: "40px" }}>
+              {p2.last_action && (
+                <div className="action-bubble">{p2.last_action}</div>
+              )}
+            </div>
+            
             <div>
               {gameState.phase === "SHOWDOWN" 
                 ? p2.hand.map((c, i) => renderCard(c, i))
@@ -214,11 +243,18 @@ function App() {
               </div>
             )}
             
+            {/* ★新規追加：あなたのアクション吹き出し */}
+            <div style={{ minHeight: "40px" }}>
+              {p1.last_action && (
+                <div className="action-bubble">{p1.last_action}</div>
+              )}
+            </div>
+
             <div className="info-tag">
-              {/* あなたにディーラーボタンがある場合に「Ⓓ」を表示 */}
               {gameState.dealer_button === "p1" && <span style={{color: "#ffeb3b", marginRight: "8px", fontWeight: "bold"}}>Ⓓ</span>}
               {p1.name} | チップ: {p1.stack} | ベット: {p1.current_bet}
-            </div>         
+            </div>
+            
             <div className="action-buttons">
               <button className="btn-call" onClick={() => takeAction('call')} disabled={!isMyTurn}>
                 {maxRaise <= 0 ? "オールイン (全額コール)" : "コール / チェック"}

@@ -186,3 +186,18 @@ button:disabled, .raise-box input:disabled { background-color: #555; cursor: not
   from { transform: translateY(10px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+/* --- アクション吹き出しのデザイン --- */
+.action-bubble {
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #333;
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-weight: 900;
+  font-size: 14px;
+  display: inline-block;
+  margin: 8px 0;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  border: 2px solid #2196f3;
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
